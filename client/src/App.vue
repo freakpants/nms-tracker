@@ -479,9 +479,12 @@ onMounted(async () => {
                     :key="`${s.id}-${r.resource_name}-${idx}`"
                     class="resource-row"
                   >
-                    <div class="resource-icon">
-                      <img v-if="r.iconUrl" :src="resolveIconUrl(r.iconUrl)" :alt="r.resource_name" @error="handleResourceIconError(r)" />
-                      <span v-else>{{ r.resource_name.slice(0, 2).toUpperCase() }}</span>
+                    <div class="resource-card">
+                      <span class="resource-card-title">{{ r.resource_name }}</span>
+                      <div class="resource-card-icon" :style="{ background: r.iconColor || '#111' }">
+                        <img v-if="r.iconUrl" :src="resolveIconUrl(r.iconUrl)" :alt="r.resource_name" @error="handleResourceIconError(r)" />
+                        <span v-else>{{ r.resource_name.slice(0, 2).toUpperCase() }}</span>
+                      </div>
                     </div>
                     <div class="resource-body">
                       <div class="resource-title">
@@ -525,11 +528,14 @@ onMounted(async () => {
         <div class="result-card">
           <h3>Resources</h3>
           <div v-if="nonSystemResources.length === 0" class="empty">No matches</div>
-          <ul v-else class="resource-list">
+          <ul v-else class="resource-list resource-list-scroll">
             <li v-for="(r, idx) in nonSystemResources" :key="idx" class="resource-row">
-              <div class="resource-icon">
-                <img v-if="r.iconUrl" :src="resolveIconUrl(r.iconUrl)" :alt="r.resource_name" @error="handleResourceIconError(r)" />
-                <span v-else>{{ r.resource_name.slice(0, 2).toUpperCase() }}</span>
+              <div class="resource-card">
+                <span class="resource-card-title">{{ r.resource_name }}</span>
+                <div class="resource-card-icon" :style="{ background: r.iconColor || '#111' }">
+                  <img v-if="r.iconUrl" :src="resolveIconUrl(r.iconUrl)" :alt="r.resource_name" @error="handleResourceIconError(r)" />
+                  <span v-else>{{ r.resource_name.slice(0, 2).toUpperCase() }}</span>
+                </div>
               </div>
               <div class="resource-body">
                 <div class="resource-title">

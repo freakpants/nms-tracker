@@ -267,7 +267,8 @@ app.get('/api/search', async (req, res) => {
       return {
         ...row,
         category: row.category || match?.category || null,
-        iconUrl: match?.iconUrl || null
+        iconUrl: match?.iconUrl || null,
+        iconColor: match?.iconColor || null
       }
     })
   }
