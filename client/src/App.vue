@@ -44,6 +44,10 @@ const resourceMatches = ref([])
 const resourceLoading = ref(false)
 const lastMatchedName = ref('')
 
+const systemError = ref('')
+const planetError = ref('')
+const resourceError = ref('')
+
 const filteredPlanets = computed(() => {
   const systemId = Number(resourceForm.value.system_id || 0)
   if (!systemId) return planets.value
@@ -77,6 +81,7 @@ async function deletePlanet(id, name) {
 }
 
 async function submitSystem() {
+  systemError.value = ''
   const payload = {
     name: systemForm.value.name.trim(),
     galaxy: systemForm.value.galaxy.trim() || null,
@@ -84,14 +89,22 @@ async function submitSystem() {
     coordinates: systemForm.value.coordinates.trim() || null,
     notes: systemForm.value.notes.trim() || null
   }
-  if (!payload.name) return
-  await axios.post(`${apiBase}/api/systems`, payload)
-  systemForm.value = { name: '', galaxy: '', region: '', coordinates: '', notes: '' }
-  await loadSystems()
-  await doSearch()
+  if (!payload.name) {
+    systemError.value = 'System name is required.'
+    return
+  }
+  try {
+    await axios.post(`${apiBase}/api/systems`, payload)
+    systemForm.value = { name: '', galaxy: '', region: '', coordinates: '', notes: '' }
+    await loadSystems()
+    await doSearch()
+  } catch (err) {
+    systemError.value = 'Could not save system. Check required fields and try again.'
+  }
 }
 
 async function submitPlanet() {
+  planetError.value = ''
   const payload = {
     system_id: Number(planetForm.value.system_id),
     name: planetForm.value.name.trim(),
@@ -100,14 +113,22 @@ async function submitPlanet() {
     sentinels: planetForm.value.sentinels.trim() || null,
     notes: planetForm.value.notes.trim() || null
   }
-  if (!payload.system_id || !payload.name) return
-  await axios.post(`${apiBase}/api/planets`, payload)
-  planetForm.value = { system_id: '', name: '', planet_type: '', weather: '', sentinels: '', notes: '' }
-  await loadPlanets()
-  await doSearch()
+  if (!payload.system_id || !payload.name) {
+    planetError.value = 'System and planet name are required.'
+    return
+  }
+  try {
+    await axios.post(`${apiBase}/api/planets`, payload)
+    planetForm.value = { system_id: '', name: '', planet_type: '', weather: '', sentinels: '', notes: '' }
+    await loadPlanets()
+    await doSearch()
+  } catch (err) {
+    planetError.value = 'Could not save planet. Check required fields and try again.'
+  }
 }
 
 async function submitResource() {
+  resourceError.value = ''
   const payload = {
     resource_name: resourceForm.value.resource_name.trim(),
     nms_item_id: resourceForm.value.nms_item_id || null,
@@ -117,22 +138,29 @@ async function submitResource() {
     notes: resourceForm.value.notes.trim() || null
   }
   const planetId = Number(resourceForm.value.planet_id)
-  if (!planetId || !payload.resource_name) return
-  await axios.put(`${apiBase}/api/planets/${planetId}/resources`, payload)
-  resourceForm.value = {
-    system_id: '',
-    planet_id: '',
-    resource_name: '',
-    nms_item_id: '',
-    category: '',
-    icon_url: '',
-    quantity: '',
-    hotspot_type: '',
-    notes: ''
+  if (!planetId || !payload.resource_name) {
+    resourceError.value = 'Planet and resource name are required.'
+    return
   }
-  resourceMatches.value = []
-  lastMatchedName.value = ''
-  await doSearch()
+  try {
+    await axios.put(`${apiBase}/api/planets/${planetId}/resources`, payload)
+    resourceForm.value = {
+      system_id: resourceForm.value.system_id,
+      planet_id: resourceForm.value.planet_id,
+      resource_name: '',
+      nms_item_id: '',
+      category: '',
+      icon_url: '',
+      quantity: '',
+      hotspot_type: '',
+      notes: ''
+    }
+    resourceMatches.value = []
+    lastMatchedName.value = ''
+    await doSearch()
+  } catch (err) {
+    resourceError.value = 'Could not save resource. Check required fields and try again.'
+  }
 }
 
 async function doSearch() {
@@ -250,6 +278,7 @@ onMounted(async () => {
             </div>
           </div>
           <button class="primary" type="submit">Save system</button>
+          <p v-if="systemError" class="form-error">{{ systemError }}</p>
         </form>
       </article>
 
@@ -288,6 +317,7 @@ onMounted(async () => {
             </div>
           </div>
           <button class="primary" type="submit">Save planet</button>
+          <p v-if="planetError" class="form-error">{{ planetError }}</p>
         </form>
       </article>
 
@@ -361,6 +391,7 @@ onMounted(async () => {
             </div>
           </div>
           <button class="primary" type="submit">Save resource</button>
+          <p v-if="resourceError" class="form-error">{{ resourceError }}</p>
         </form>
       </article>
     </section>

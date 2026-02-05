@@ -341,6 +341,11 @@ select:focus {
   font-size: 12px;
 }
 
+.form-error {
+  color: #ffb2b2;
+  font-size: 12px;
+}
+
 .note {
   color: #aac0c8;
   margin-top: 6px;
