@@ -2,8 +2,8 @@
   font-family: "Space Grotesk", "IBM Plex Sans", "Segoe UI", sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color: #0f1a1f;
-  background-color: #edf4f5;
+  color: #e6edf0;
+  background-color: #0b1215;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -17,7 +17,7 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: radial-gradient(circle at top, #f6f3ff, #edf4f5 45%, #e2f0ec 80%);
+  background: radial-gradient(circle at top, #1a2730, #0b1215 45%, #070b0d 80%);
 }
 
 h1,
@@ -48,21 +48,21 @@ p {
   gap: 20px;
   padding: 24px;
   border-radius: 24px;
-  background: linear-gradient(130deg, #fff6dd, #e5f6ff 55%, #f7f2ff);
-  box-shadow: 0 20px 40px rgba(15, 26, 31, 0.08);
+  background: linear-gradient(130deg, #1c2a36, #10242e 55%, #1b1b2e);
+  box-shadow: 0 20px 40px rgba(2, 6, 10, 0.55);
 }
 
 .kicker {
   text-transform: uppercase;
   font-size: 12px;
   letter-spacing: 0.28em;
-  color: #5a7a7f;
+  color: #8fb1bf;
   margin-bottom: 10px;
 }
 
 .lede {
   margin-top: 10px;
-  color: #344b52;
+  color: #b2c4cc;
 }
 
 .hero-chip {
@@ -70,7 +70,7 @@ p {
   gap: 8px;
   padding: 14px 18px;
   border-radius: 16px;
-  background: rgba(15, 26, 31, 0.08);
+  background: rgba(9, 14, 18, 0.65);
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -80,7 +80,7 @@ p {
   text-transform: none;
   font-size: 16px;
   letter-spacing: -0.01em;
-  color: #0f1a1f;
+  color: #e6edf0;
 }
 
 .grid {
@@ -93,9 +93,10 @@ p {
 .card {
   padding: 20px;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 16px 35px rgba(15, 26, 31, 0.08);
+  background: rgba(13, 19, 24, 0.9);
+  box-shadow: 0 16px 35px rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(6px);
+  border: 1px solid rgba(140, 170, 188, 0.18);
 }
 
 .form {
@@ -119,30 +120,31 @@ label {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: #5f6f74;
+  color: #7f9aa6;
 }
 
 input,
 select {
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(15, 26, 31, 0.18);
-  background: #ffffff;
+  border: 1px solid rgba(130, 158, 170, 0.25);
+  background: #0c1419;
+  color: #e6edf0;
   font-size: 14px;
 }
 
 input:focus,
 select:focus {
-  outline: 2px solid rgba(23, 123, 168, 0.25);
-  border-color: #177ba8;
+  outline: 2px solid rgba(66, 178, 224, 0.35);
+  border-color: #42b2e0;
 }
 
 .primary {
   padding: 10px 16px;
   border-radius: 12px;
   border: none;
-  background: #177ba8;
-  color: #ffffff;
+  background: #42b2e0;
+  color: #041019;
   font-weight: 600;
   cursor: pointer;
 }
@@ -156,11 +158,12 @@ select:focus {
   top: 76px;
   left: 0;
   right: 0;
-  background: #ffffff;
+  background: #0c1419;
   border-radius: 12px;
-  box-shadow: 0 12px 30px rgba(15, 26, 31, 0.12);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
   display: grid;
   z-index: 5;
+  border: 1px solid rgba(130, 158, 170, 0.3);
 }
 
 .dropdown-item {
@@ -184,12 +187,12 @@ select:focus {
   width: 26px;
   height: 26px;
   border-radius: 8px;
-  background: rgba(15, 26, 31, 0.08);
+  background: rgba(15, 26, 31, 0.3);
   object-fit: cover;
 }
 
 .dropdown-item:hover {
-  background: rgba(23, 123, 168, 0.08);
+  background: rgba(66, 178, 224, 0.12);
 }
 
 .search {
@@ -200,8 +203,10 @@ select:focus {
   width: 100%;
   padding: 12px 14px;
   border-radius: 14px;
-  border: 1px solid rgba(15, 26, 31, 0.2);
+  border: 1px solid rgba(130, 158, 170, 0.35);
   margin-top: 12px;
+  background: #0c1419;
+  color: #e6edf0;
 }
 
 .results {
@@ -214,8 +219,9 @@ select:focus {
 .result-card {
   padding: 16px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.85);
-  box-shadow: 0 12px 28px rgba(15, 26, 31, 0.08);
+  background: rgba(10, 16, 20, 0.85);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(130, 158, 170, 0.2);
 }
 
 .result-card ul {
@@ -237,20 +243,21 @@ select:focus {
   align-items: center;
   padding: 10px 12px;
   border-radius: 14px;
-  background: linear-gradient(120deg, rgba(15, 26, 31, 0.04), rgba(23, 123, 168, 0.08));
-  border: 1px solid rgba(15, 26, 31, 0.08);
+  background: linear-gradient(120deg, rgba(8, 14, 18, 0.6), rgba(20, 60, 80, 0.4));
+  border: 1px solid rgba(130, 158, 170, 0.18);
 }
 
 .resource-icon {
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: rgba(15, 26, 31, 0.12);
+  background: rgba(8, 14, 18, 0.6);
   display: grid;
   place-items: center;
   font-size: 12px;
   font-weight: 600;
-  color: #21363d;
+  color: #c8d7de;
+  border: 1px solid rgba(130, 158, 170, 0.2);
 }
 
 .resource-icon img {
@@ -276,15 +283,15 @@ select:focus {
   font-size: 11px;
   padding: 2px 8px;
   border-radius: 999px;
-  background: rgba(23, 123, 168, 0.16);
-  color: #1b5c78;
+  background: rgba(66, 178, 224, 0.2);
+  color: #9ed7ef;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
 
 .resource-meta {
   font-size: 12px;
-  color: #5f6f74;
+  color: #9ab0ba;
 }
 
 .resource-badges {
@@ -297,9 +304,10 @@ select:focus {
   padding: 4px 8px;
   border-radius: 999px;
   font-size: 11px;
-  background: rgba(15, 26, 31, 0.08);
-  color: #33484f;
+  background: rgba(8, 14, 18, 0.6);
+  color: #c8d7de;
   white-space: nowrap;
+  border: 1px solid rgba(130, 158, 170, 0.2);
 }
 
 .list-row {
@@ -312,34 +320,34 @@ select:focus {
 .danger {
   padding: 6px 10px;
   border-radius: 10px;
-  border: 1px solid rgba(175, 41, 41, 0.3);
-  background: rgba(175, 41, 41, 0.08);
-  color: #8d1f1f;
+  border: 1px solid rgba(255, 96, 96, 0.3);
+  background: rgba(255, 96, 96, 0.12);
+  color: #ffb2b2;
   font-size: 12px;
   cursor: pointer;
 }
 
 .danger:hover {
-  background: rgba(175, 41, 41, 0.16);
+  background: rgba(255, 96, 96, 0.22);
 }
 
 .muted {
-  color: #6d7f85;
+  color: #8fa5af;
   font-size: 12px;
 }
 
 .hint {
-  color: #5f6f74;
+  color: #8fa5af;
   font-size: 12px;
 }
 
 .note {
-  color: #4a5d62;
+  color: #aac0c8;
   margin-top: 6px;
 }
 
 .empty {
-  color: #6d7f85;
+  color: #8fa5af;
   font-size: 14px;
 }
 
@@ -349,7 +357,7 @@ select:focus {
   gap: 12px;
   padding: 10px 12px;
   border-radius: 12px;
-  background: rgba(23, 123, 168, 0.08);
+  background: rgba(66, 178, 224, 0.16);
 }
 
 .resource-preview {
@@ -358,9 +366,9 @@ select:focus {
   gap: 10px;
   padding: 8px 10px;
   border-radius: 12px;
-  background: rgba(23, 123, 168, 0.08);
+  background: rgba(66, 178, 224, 0.16);
   font-size: 12px;
-  color: #5f6f74;
+  color: #b3c8d0;
 }
 
 .resource-preview img {
