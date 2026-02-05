@@ -206,11 +206,16 @@ app.get('/api/search', async (req, res) => {
   const like = q ? `%${q}%` : '%'
 
   const systems = db.prepare(`
-    SELECT * FROM systems
-    WHERE name LIKE ? OR galaxy LIKE ? OR region LIKE ? OR coordinates LIKE ? OR notes LIKE ?
+    SELECT DISTINCT s.* FROM systems s
+    WHERE s.name LIKE ? OR s.galaxy LIKE ? OR s.region LIKE ? OR s.coordinates LIKE ? OR s.notes LIKE ?
+    UNION
+    SELECT DISTINCT s.* FROM systems s
+    JOIN system_resources sr ON sr.system_id = s.id
+    JOIN resources r ON r.id = sr.resource_id
+    WHERE r.name LIKE ? OR sr.notes LIKE ?
     ORDER BY name
     LIMIT 50
-  `).all(like, like, like, like, like)
+  `).all(like, like, like, like, like, like, like)
 
   const planets = db.prepare(`
     SELECT p.*, s.name AS system_name
@@ -218,9 +223,16 @@ app.get('/api/search', async (req, res) => {
     JOIN systems s ON s.id = p.system_id
     WHERE p.name LIKE ? OR p.planet_type LIKE ? OR p.weather LIKE ? OR p.sentinels LIKE ? OR p.notes LIKE ?
        OR s.name LIKE ?
-    ORDER BY s.name, p.name
+    UNION
+    SELECT DISTINCT p.*, s.name AS system_name
+    FROM planets p
+    JOIN systems s ON s.id = p.system_id
+    JOIN planet_resources pr ON pr.planet_id = p.id
+    JOIN resources r ON r.id = pr.resource_id
+    WHERE r.name LIKE ? OR pr.notes LIKE ?
+    ORDER BY system_name, name
     LIMIT 100
-  `).all(like, like, like, like, like, like)
+  `).all(like, like, like, like, like, like, like, like)
 
   const planetResources = db.prepare(`
     SELECT r.name AS resource_name, r.nms_item_id, r.category,

@@ -50,6 +50,10 @@ const systemError = ref('')
 const planetError = ref('')
 const resourceError = ref('')
 
+const systemNames = computed(() => {
+  return new Set((results.value.systems || []).map(s => s.name))
+})
+
 const systemResourcesByName = computed(() => {
   const byName = {}
   for (const resource of results.value.resources || []) {
@@ -64,9 +68,13 @@ const systemResourcesByName = computed(() => {
   return byName
 })
 
-const nonSystemResources = computed(() =>
-  (results.value.resources || []).filter(resource => resource.location_type !== 'system')
-)
+const nonSystemResources = computed(() => {
+  const planetResources = (results.value.resources || []).filter(resource => resource.location_type === 'planet')
+  const unlistedSystemResources = (results.value.resources || []).filter(resource => 
+    resource.location_type === 'system' && !systemNames.value.has(resource.system_name)
+  )
+  return [...planetResources, ...unlistedSystemResources]
+})
 
 const filteredPlanets = computed(() => {
   const systemId = Number(resourceForm.value.system_id || 0)
