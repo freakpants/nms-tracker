@@ -228,6 +228,18 @@ function applyResourceMatch(match) {
   lastMatchedName.value = match.name
 }
 
+function clearMatchIcon(match) {
+  match.iconUrl = ''
+}
+
+function clearResourceIcon(resource) {
+  resource.iconUrl = ''
+}
+
+function clearSelectedIcon() {
+  resourceForm.value.icon_url = ''
+}
+
 onMounted(async () => {
   await loadSystems()
   await loadPlanets()
@@ -355,14 +367,17 @@ onMounted(async () => {
                 @click="applyResourceMatch(match)"
               >
                 <span class="dropdown-main">
-                  <img v-if="match.iconUrl" :src="match.iconUrl" :alt="match.name" />
+                  <span v-if="match.iconUrl" class="dropdown-icon">
+                    <img :src="match.iconUrl" :alt="match.name" @error="clearMatchIcon(match)" />
+                  </span>
+                  <span v-else class="dropdown-fallback">{{ match.name.slice(0, 2).toUpperCase() }}</span>
                   <span>{{ match.name }}</span>
                 </span>
                 <span class="muted">{{ match.category || 'Unknown' }}</span>
               </button>
             </div>
             <div v-if="resourceForm.icon_url" class="resource-preview">
-              <img :src="resourceForm.icon_url" :alt="resourceForm.resource_name" />
+              <img :src="resourceForm.icon_url" :alt="resourceForm.resource_name" @error="clearSelectedIcon" />
               <span>Catalog icon</span>
             </div>
           </div>
@@ -442,7 +457,7 @@ onMounted(async () => {
           <ul v-else class="resource-list">
             <li v-for="(r, idx) in results.resources" :key="idx" class="resource-row">
               <div class="resource-icon">
-                <img v-if="r.iconUrl" :src="r.iconUrl" :alt="r.resource_name" />
+                <img v-if="r.iconUrl" :src="r.iconUrl" :alt="r.resource_name" @error="clearResourceIcon(r)" />
                 <span v-else>{{ r.resource_name.slice(0, 2).toUpperCase() }}</span>
               </div>
               <div class="resource-body">

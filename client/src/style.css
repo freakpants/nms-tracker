@@ -190,11 +190,22 @@ select:focus {
   gap: 10px;
 }
 
-.dropdown-main img {
+.dropdown-icon,
+.dropdown-fallback {
   width: 26px;
   height: 26px;
   border-radius: 8px;
   background: rgba(15, 26, 31, 0.3);
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  color: #c8d7de;
+}
+
+.dropdown-icon img {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
   object-fit: cover;
 }
 
