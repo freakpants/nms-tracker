@@ -6,6 +6,7 @@ import { getItemCache } from './nmsCache.js'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const iconCacheDir = path.join(__dirname, 'icon-cache')
 const iconCdnBase = 'https://cdn.nmsassistant.com/'
+const iconGithubBase = 'https://raw.githubusercontent.com/AssistantNMS/WebApp/main/public/assets/images/'
 const concurrency = 8
 
 async function fileExists(filePath) {
@@ -17,16 +18,23 @@ async function fileExists(filePath) {
   }
 }
 
+async function fetchIcon(url) {
+  return fetch(url, {
+    headers: {
+      'User-Agent': 'nms-tracker-icon-cache/1.0'
+    }
+  })
+}
+
 async function downloadIcon(iconPath) {
   const localPath = path.join(iconCacheDir, iconPath)
   if (await fileExists(localPath)) return { iconPath, skipped: true }
 
   const url = `${iconCdnBase}${iconPath}`
-  const response = await fetch(url, {
-    headers: {
-      'User-Agent': 'nms-tracker-icon-cache/1.0'
-    }
-  })
+  let response = await fetchIcon(url)
+  if (response.status === 404) {
+    response = await fetchIcon(`${iconGithubBase}${iconPath}`)
+  }
   if (!response.ok) return { iconPath, skipped: false, error: response.status }
 
   const buffer = Buffer.from(await response.arrayBuffer())
