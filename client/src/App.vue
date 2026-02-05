@@ -49,6 +49,24 @@ const systemError = ref('')
 const planetError = ref('')
 const resourceError = ref('')
 
+const systemResourcesByName = computed(() => {
+  const byName = {}
+  for (const resource of results.value.resources || []) {
+    if (resource.location_type !== 'system') continue
+    const key = resource.system_name || ''
+    if (!byName[key]) byName[key] = []
+    byName[key].push(resource)
+  }
+  for (const key of Object.keys(byName)) {
+    byName[key].sort((a, b) => a.resource_name.localeCompare(b.resource_name))
+  }
+  return byName
+})
+
+const nonSystemResources = computed(() =>
+  (results.value.resources || []).filter(resource => resource.location_type !== 'system')
+)
+
 const filteredPlanets = computed(() => {
   const systemId = Number(resourceForm.value.system_id || 0)
   if (!systemId) return planets.value
@@ -259,6 +277,10 @@ function resolveIconUrl(url) {
   return `${apiBase}${url}`
 }
 
+function getSystemResources(systemName) {
+  return systemResourcesByName.value[systemName] || []
+}
+
 onMounted(async () => {
   await loadSystems()
   await loadPlanets()
@@ -444,11 +466,41 @@ onMounted(async () => {
           <h3>Systems</h3>
           <div v-if="results.systems.length === 0" class="empty">No matches</div>
           <ul v-else>
-            <li v-for="s in results.systems" :key="s.id" class="list-row">
-              <div>
-                <strong>{{ s.name }}</strong>
-                <span v-if="s.galaxy"> — {{ s.galaxy }}</span>
-                <span v-if="s.coordinates"> ({{ s.coordinates }})</span>
+            <li v-for="s in results.systems" :key="s.id" class="list-row system-row">
+              <div class="system-main">
+                <div>
+                  <strong>{{ s.name }}</strong>
+                  <span v-if="s.galaxy"> — {{ s.galaxy }}</span>
+                  <span v-if="s.coordinates"> ({{ s.coordinates }})</span>
+                </div>
+                <ul v-if="getSystemResources(s.name).length" class="resource-list system-resource-list">
+                  <li
+                    v-for="(r, idx) in getSystemResources(s.name)"
+                    :key="`${s.id}-${r.resource_name}-${idx}`"
+                    class="resource-row"
+                  >
+                    <div class="resource-icon">
+                      <img v-if="r.iconUrl" :src="resolveIconUrl(r.iconUrl)" :alt="r.resource_name" @error="handleResourceIconError(r)" />
+                      <span v-else>{{ r.resource_name.slice(0, 2).toUpperCase() }}</span>
+                    </div>
+                    <div class="resource-body">
+                      <div class="resource-title">
+                        <strong>{{ r.resource_name }}</strong>
+                        <span v-if="r.category" class="resource-tag">{{ r.category }}</span>
+                      </div>
+                      <div class="resource-meta">
+                        <span v-if="r.planet_name">{{ r.system_name }} / {{ r.planet_name }}</span>
+                        <span v-else>System: {{ r.system_name }}</span>
+                      </div>
+                      <div v-if="r.notes" class="note">{{ r.notes }}</div>
+                    </div>
+                    <div class="resource-badges">
+                      <span v-if="r.location_type === 'system'" class="resource-pill">System</span>
+                      <span v-if="r.hotspot_type" class="resource-pill">{{ r.hotspot_type }}</span>
+                      <span v-if="r.quantity" class="resource-pill">{{ r.quantity }}</span>
+                    </div>
+                  </li>
+                </ul>
               </div>
               <button class="danger" type="button" @click="deleteSystem(s.id, s.name)">Delete</button>
             </li>
@@ -472,9 +524,9 @@ onMounted(async () => {
 
         <div class="result-card">
           <h3>Resources</h3>
-          <div v-if="results.resources.length === 0" class="empty">No matches</div>
+          <div v-if="nonSystemResources.length === 0" class="empty">No matches</div>
           <ul v-else class="resource-list">
-            <li v-for="(r, idx) in results.resources" :key="idx" class="resource-row">
+            <li v-for="(r, idx) in nonSystemResources" :key="idx" class="resource-row">
               <div class="resource-icon">
                 <img v-if="r.iconUrl" :src="resolveIconUrl(r.iconUrl)" :alt="r.resource_name" @error="handleResourceIconError(r)" />
                 <span v-else>{{ r.resource_name.slice(0, 2).toUpperCase() }}</span>

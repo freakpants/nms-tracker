@@ -335,6 +335,20 @@ select:focus {
   gap: 12px;
 }
 
+.system-row {
+  align-items: flex-start;
+}
+
+.system-main {
+  display: grid;
+  gap: 6px;
+}
+
+.system-resource-list {
+  margin: 8px 0 0;
+  padding-left: 0;
+}
+
 .danger {
   padding: 6px 10px;
   border-radius: 10px;
