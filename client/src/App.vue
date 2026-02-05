@@ -138,12 +138,17 @@ async function submitResource() {
     notes: resourceForm.value.notes.trim() || null
   }
   const planetId = Number(resourceForm.value.planet_id)
-  if (!planetId || !payload.resource_name) {
-    resourceError.value = 'Planet and resource name are required.'
+  const systemId = Number(resourceForm.value.system_id)
+  if (!payload.resource_name || (!planetId && !systemId)) {
+    resourceError.value = 'Select a system or planet and enter a resource name.'
     return
   }
   try {
-    await axios.put(`${apiBase}/api/planets/${planetId}/resources`, payload)
+    if (planetId) {
+      await axios.put(`${apiBase}/api/planets/${planetId}/resources`, payload)
+    } else {
+      await axios.put(`${apiBase}/api/systems/${systemId}/resources`, payload)
+    }
     resourceForm.value = {
       system_id: resourceForm.value.system_id,
       planet_id: resourceForm.value.planet_id,
@@ -338,7 +343,7 @@ onMounted(async () => {
         <form class="form" @submit.prevent="submitResource">
           <div class="row">
             <div class="field">
-              <label>System (optional)</label>
+              <label>System</label>
               <select v-model="resourceForm.system_id">
                 <option value="">All systems</option>
                 <option v-for="s in systems" :key="s.id" :value="s.id">{{ s.name }}</option>
@@ -465,10 +470,14 @@ onMounted(async () => {
                   <strong>{{ r.resource_name }}</strong>
                   <span v-if="r.category" class="resource-tag">{{ r.category }}</span>
                 </div>
-                <div class="resource-meta">{{ r.system_name }} / {{ r.planet_name }}</div>
+                <div class="resource-meta">
+                  <span v-if="r.planet_name">{{ r.system_name }} / {{ r.planet_name }}</span>
+                  <span v-else>System: {{ r.system_name }}</span>
+                </div>
                 <div v-if="r.notes" class="note">{{ r.notes }}</div>
               </div>
               <div class="resource-badges">
+                <span v-if="r.location_type === 'system'" class="resource-pill">System</span>
                 <span v-if="r.hotspot_type" class="resource-pill">{{ r.hotspot_type }}</span>
                 <span v-if="r.quantity" class="resource-pill">{{ r.quantity }}</span>
               </div>

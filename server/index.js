@@ -147,6 +147,49 @@ app.put('/api/planets/:planetId/resources', (req, res) => {
   res.json({ ok: true })
 })
 
+// Add/update a resource on a system (resource auto-created if missing)
+app.put('/api/systems/:systemId/resources', (req, res) => {
+  const systemId = Number(req.params.systemId)
+
+  const Body = z.object({
+    resource_name: z.string().min(1),
+    nms_item_id: z.string().optional().nullable(),
+    category: z.string().optional().nullable(),
+    quantity: z.string().optional().nullable(),
+    hotspot_type: z.string().optional().nullable(),
+    notes: z.string().optional().nullable()
+  })
+
+  const data = Body.parse(req.body)
+
+  const upsertResource = db.prepare(`
+    INSERT INTO resources (name, nms_item_id, category)
+    VALUES (?, ?, ?)
+    ON CONFLICT(name) DO UPDATE SET
+      nms_item_id = COALESCE(excluded.nms_item_id, resources.nms_item_id),
+      category = COALESCE(excluded.category, resources.category)
+  `)
+
+  const getResId = db.prepare(`SELECT id FROM resources WHERE name = ?`)
+  const upsertLink = db.prepare(`
+    INSERT INTO system_resources (system_id, resource_id, quantity, hotspot_type, notes)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(system_id, resource_id) DO UPDATE SET
+      quantity = excluded.quantity,
+      hotspot_type = excluded.hotspot_type,
+      notes = excluded.notes
+  `)
+
+  const tx = db.transaction(() => {
+    upsertResource.run(data.resource_name, data.nms_item_id ?? null, data.category ?? null)
+    const row = getResId.get(data.resource_name)
+    upsertLink.run(systemId, row.id, data.quantity ?? null, data.hotspot_type ?? null, data.notes ?? null)
+  })
+
+  tx()
+  res.json({ ok: true })
+})
+
 // Search across everything
 app.get('/api/search', async (req, res) => {
   const q = String(req.query.q || '').trim()
@@ -169,10 +212,11 @@ app.get('/api/search', async (req, res) => {
     LIMIT 100
   `).all(like, like, like, like, like, like)
 
-  const rawResources = db.prepare(`
+  const planetResources = db.prepare(`
     SELECT r.name AS resource_name, r.nms_item_id, r.category,
            s.name AS system_name, p.name AS planet_name,
-           pr.quantity, pr.hotspot_type, pr.notes
+           pr.quantity, pr.hotspot_type, pr.notes,
+           'planet' AS location_type
     FROM planet_resources pr
     JOIN resources r ON r.id = pr.resource_id
     JOIN planets p ON p.id = pr.planet_id
@@ -181,6 +225,21 @@ app.get('/api/search', async (req, res) => {
     ORDER BY r.name
     LIMIT 200
   `).all(like, like, like, like)
+
+  const systemResources = db.prepare(`
+    SELECT r.name AS resource_name, r.nms_item_id, r.category,
+           s.name AS system_name, NULL AS planet_name,
+           sr.quantity, sr.hotspot_type, sr.notes,
+           'system' AS location_type
+    FROM system_resources sr
+    JOIN resources r ON r.id = sr.resource_id
+    JOIN systems s ON s.id = sr.system_id
+    WHERE r.name LIKE ? OR sr.notes LIKE ? OR s.name LIKE ?
+    ORDER BY r.name
+    LIMIT 200
+  `).all(like, like, like)
+
+  const rawResources = [...planetResources, ...systemResources]
 
   let resources = rawResources
   if (rawResources.length) {
@@ -202,6 +261,8 @@ app.get('/api/search', async (req, res) => {
       }
     })
   }
+
+  resources.sort((a, b) => a.resource_name.localeCompare(b.resource_name))
 
   res.json({ systems, planets, resources })
 })
