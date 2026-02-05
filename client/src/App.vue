@@ -34,6 +34,7 @@ const resourceForm = ref({
   resource_name: '',
   nms_item_id: '',
   category: '',
+  icon_path: '',
   icon_url: '',
   quantity: '',
   hotspot_type: '',
@@ -155,6 +156,7 @@ async function submitResource() {
       resource_name: '',
       nms_item_id: '',
       category: '',
+      icon_path: '',
       icon_url: '',
       quantity: '',
       hotspot_type: '',
@@ -228,25 +230,31 @@ function applyResourceMatch(match) {
   resourceForm.value.resource_name = match.name
   resourceForm.value.nms_item_id = match.id || ''
   resourceForm.value.category = match.category || ''
+  resourceForm.value.icon_path = match.icon || ''
   resourceForm.value.icon_url = match.iconUrl || ''
   resourceMatches.value = []
   lastMatchedName.value = match.name
 }
 
-function clearMatchIcon(match) {
+function handleMatchIconError(match) {
   match.iconUrl = ''
 }
 
-function clearResourceIcon(resource) {
+function handleResourceIconError(resource) {
   resource.iconUrl = ''
 }
 
-function clearSelectedIcon() {
+function handleSelectedIconError() {
   resourceForm.value.icon_url = ''
 }
 
 function resolveIconUrl(url) {
   if (!url) return ''
+  const cdnPrefix = 'https://cdn.nmsassistant.com/icons/'
+  if (url.startsWith(cdnPrefix)) {
+    return `${apiBase}/api/icons/${url.slice(cdnPrefix.length)}`
+  }
+  if (url.startsWith('/api/icons/')) return `${apiBase}${url}`
   if (url.startsWith('http')) return url
   return `${apiBase}${url}`
 }
@@ -379,7 +387,7 @@ onMounted(async () => {
               >
                 <span class="dropdown-main">
                   <span v-if="match.iconUrl" class="dropdown-icon">
-                    <img :src="resolveIconUrl(match.iconUrl)" :alt="match.name" @error="clearMatchIcon(match)" />
+                    <img :src="resolveIconUrl(match.iconUrl)" :alt="match.name" @error="handleMatchIconError(match)" />
                   </span>
                   <span v-else class="dropdown-fallback">{{ match.name.slice(0, 2).toUpperCase() }}</span>
                   <span>{{ match.name }}</span>
@@ -388,7 +396,7 @@ onMounted(async () => {
               </button>
             </div>
             <div v-if="resourceForm.icon_url" class="resource-preview">
-              <img :src="resolveIconUrl(resourceForm.icon_url)" :alt="resourceForm.resource_name" @error="clearSelectedIcon" />
+              <img :src="resolveIconUrl(resourceForm.icon_url)" :alt="resourceForm.resource_name" @error="handleSelectedIconError" />
               <span>Catalog icon</span>
             </div>
           </div>
@@ -468,7 +476,7 @@ onMounted(async () => {
           <ul v-else class="resource-list">
             <li v-for="(r, idx) in results.resources" :key="idx" class="resource-row">
               <div class="resource-icon">
-                <img v-if="r.iconUrl" :src="resolveIconUrl(r.iconUrl)" :alt="r.resource_name" @error="clearResourceIcon(r)" />
+                <img v-if="r.iconUrl" :src="resolveIconUrl(r.iconUrl)" :alt="r.resource_name" @error="handleResourceIconError(r)" />
                 <span v-else>{{ r.resource_name.slice(0, 2).toUpperCase() }}</span>
               </div>
               <div class="resource-body">

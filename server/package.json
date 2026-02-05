@@ -3,7 +3,8 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon index.js",
-    "start": "node index.js"
+    "start": "node index.js",
+    "cache-icons": "node cacheIcons.js"
   },
   "version": "1.0.0",
   "main": "index.js",

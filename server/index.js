@@ -1,7 +1,6 @@
 import express from 'express'
 import cors from 'cors'
 import path from 'path'
-import fs from 'fs/promises'
 import { fileURLToPath } from 'url'
 import { z } from 'zod'
 import { db } from './db.js'
@@ -13,7 +12,6 @@ app.use(express.json())
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const iconCacheDir = path.join(__dirname, 'icon-cache')
-const iconCdnBase = 'https://cdn.nmsassistant.com/icons/'
 
 const SystemSchema = z.object({
   name: z.string().min(1),
@@ -34,40 +32,10 @@ const PlanetSchema = z.object({
 
 app.get('/api/health', (req, res) => res.json({ ok: true }))
 
-app.use('/api/icons', async (req, res) => {
-  const rawPath = req.path.replace(/^\/+/, '')
-  const safePath = path.posix.normalize(rawPath).replace(/^\/+/, '')
-  if (!safePath || safePath.includes('..')) {
-    return res.status(400).json({ error: 'Invalid icon path' })
-  }
-
-  const localPath = path.join(iconCacheDir, safePath)
-  try {
-    await fs.access(localPath)
-    res.set('Cache-Control', 'public, max-age=86400')
-    return res.sendFile(localPath)
-  } catch (err) {
-    // continue to fetch
-  }
-
-  const remoteUrl = `${iconCdnBase}${safePath}`
-  let response
-  try {
-    response = await fetch(remoteUrl)
-  } catch (err) {
-    return res.status(502).json({ error: 'Failed to reach icon CDN' })
-  }
-
-  if (!response.ok) {
-    return res.status(404).json({ error: 'Icon not found' })
-  }
-
-  const buffer = Buffer.from(await response.arrayBuffer())
-  await fs.mkdir(path.dirname(localPath), { recursive: true })
-  await fs.writeFile(localPath, buffer)
-  res.set('Cache-Control', 'public, max-age=86400')
-  return res.sendFile(localPath)
-})
+app.use('/api/icons', express.static(iconCacheDir, {
+  fallthrough: false,
+  maxAge: '1d'
+}))
 
 // List systems
 app.get('/api/systems', (req, res) => {
