@@ -245,6 +245,12 @@ function clearSelectedIcon() {
   resourceForm.value.icon_url = ''
 }
 
+function resolveIconUrl(url) {
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+  return `${apiBase}${url}`
+}
+
 onMounted(async () => {
   await loadSystems()
   await loadPlanets()
@@ -373,7 +379,7 @@ onMounted(async () => {
               >
                 <span class="dropdown-main">
                   <span v-if="match.iconUrl" class="dropdown-icon">
-                    <img :src="match.iconUrl" :alt="match.name" @error="clearMatchIcon(match)" />
+                    <img :src="resolveIconUrl(match.iconUrl)" :alt="match.name" @error="clearMatchIcon(match)" />
                   </span>
                   <span v-else class="dropdown-fallback">{{ match.name.slice(0, 2).toUpperCase() }}</span>
                   <span>{{ match.name }}</span>
@@ -382,7 +388,7 @@ onMounted(async () => {
               </button>
             </div>
             <div v-if="resourceForm.icon_url" class="resource-preview">
-              <img :src="resourceForm.icon_url" :alt="resourceForm.resource_name" @error="clearSelectedIcon" />
+              <img :src="resolveIconUrl(resourceForm.icon_url)" :alt="resourceForm.resource_name" @error="clearSelectedIcon" />
               <span>Catalog icon</span>
             </div>
           </div>
@@ -462,7 +468,7 @@ onMounted(async () => {
           <ul v-else class="resource-list">
             <li v-for="(r, idx) in results.resources" :key="idx" class="resource-row">
               <div class="resource-icon">
-                <img v-if="r.iconUrl" :src="r.iconUrl" :alt="r.resource_name" @error="clearResourceIcon(r)" />
+                <img v-if="r.iconUrl" :src="resolveIconUrl(r.iconUrl)" :alt="r.resource_name" @error="clearResourceIcon(r)" />
                 <span v-else>{{ r.resource_name.slice(0, 2).toUpperCase() }}</span>
               </div>
               <div class="resource-body">

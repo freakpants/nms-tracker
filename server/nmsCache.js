@@ -10,14 +10,14 @@ export async function getItemCache() {
   const svc = new GameItemService()
   const allItems = await svc.getAllItemDetails() // from package readme example :contentReference[oaicite:1]{index=1}
 
-  const iconBase = 'https://cdn.nmsassistant.com/icons/'
+  const iconBase = '/api/icons/'
 
   cache = allItems.map(itm => ({
     name: itm?.Name ?? '',
     id: itm?.Id ?? itm?.ID ?? null,
     category: itm?.Category ?? itm?.Type ?? null,
     icon: itm?.Icon ?? null,
-    iconUrl: itm?.CdnUrl || (itm?.Icon ? `${iconBase}${itm.Icon}` : null)
+    iconUrl: itm?.Icon ? `${iconBase}${itm.Icon}` : null
   })).filter(x => x.name)
 
   cacheAt = now
