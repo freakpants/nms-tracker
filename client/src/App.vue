@@ -536,9 +536,9 @@ onMounted(async () => {
           <ul v-else class="resource-card-list">
             <li v-for="(r, idx) in nonSystemResources" :key="idx" class="resource-card-item">
               <div class="resource-card">
-                <span class="resource-card-title" :class="{ scrolling: shouldScrollTitle(r.resource_name) }">
-                  <span>{{ r.resource_name }}</span>
-                </span>
+                <div class="resource-card-title" :class="{ scrolling: shouldScrollTitle(r.resource_name) }">
+                  <div class="resource-card-title-text">{{ r.resource_name }}</div>
+                </div>
                 <div class="resource-card-icon" :style="{ background: r.iconColor || '#111' }">
                   <img v-if="r.iconUrl" :src="resolveIconUrl(r.iconUrl)" :alt="r.resource_name" @error="handleResourceIconError(r)" />
                   <span v-else>{{ r.resource_name.slice(0, 2).toUpperCase() }}</span>
