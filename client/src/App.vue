@@ -1,0 +1,403 @@
+<script setup>
+import { computed, onMounted, ref, watch } from 'vue'
+import axios from 'axios'
+
+const apiBase = 'http://localhost:3789'
+
+const q = ref('')
+const results = ref({ systems: [], planets: [], resources: [] })
+const loading = ref(false)
+
+const systems = ref([])
+const planets = ref([])
+
+const systemForm = ref({
+  name: '',
+  galaxy: '',
+  region: '',
+  coordinates: '',
+  notes: ''
+})
+
+const planetForm = ref({
+  system_id: '',
+  name: '',
+  planet_type: '',
+  weather: '',
+  sentinels: '',
+  notes: ''
+})
+
+const resourceForm = ref({
+  system_id: '',
+  planet_id: '',
+  resource_name: '',
+  nms_item_id: '',
+  category: '',
+  icon_url: '',
+  quantity: '',
+  hotspot_type: '',
+  notes: ''
+})
+
+const resourceMatches = ref([])
+const resourceLoading = ref(false)
+const lastMatchedName = ref('')
+
+const filteredPlanets = computed(() => {
+  const systemId = Number(resourceForm.value.system_id || 0)
+  if (!systemId) return planets.value
+  return planets.value.filter(p => p.system_id === systemId)
+})
+
+async function loadSystems() {
+  const { data } = await axios.get(`${apiBase}/api/systems`)
+  systems.value = data
+}
+
+async function loadPlanets(systemId) {
+  const params = systemId ? { systemId } : undefined
+  const { data } = await axios.get(`${apiBase}/api/planets`, { params })
+  planets.value = data
+}
+
+async function submitSystem() {
+  const payload = {
+    name: systemForm.value.name.trim(),
+    galaxy: systemForm.value.galaxy.trim() || null,
+    region: systemForm.value.region.trim() || null,
+    coordinates: systemForm.value.coordinates.trim() || null,
+    notes: systemForm.value.notes.trim() || null
+  }
+  if (!payload.name) return
+  await axios.post(`${apiBase}/api/systems`, payload)
+  systemForm.value = { name: '', galaxy: '', region: '', coordinates: '', notes: '' }
+  await loadSystems()
+}
+
+async function submitPlanet() {
+  const payload = {
+    system_id: Number(planetForm.value.system_id),
+    name: planetForm.value.name.trim(),
+    planet_type: planetForm.value.planet_type.trim() || null,
+    weather: planetForm.value.weather.trim() || null,
+    sentinels: planetForm.value.sentinels.trim() || null,
+    notes: planetForm.value.notes.trim() || null
+  }
+  if (!payload.system_id || !payload.name) return
+  await axios.post(`${apiBase}/api/planets`, payload)
+  planetForm.value = { system_id: '', name: '', planet_type: '', weather: '', sentinels: '', notes: '' }
+  await loadPlanets()
+}
+
+async function submitResource() {
+  const payload = {
+    resource_name: resourceForm.value.resource_name.trim(),
+    nms_item_id: resourceForm.value.nms_item_id || null,
+    category: resourceForm.value.category || null,
+    quantity: resourceForm.value.quantity.trim() || null,
+    hotspot_type: resourceForm.value.hotspot_type.trim() || null,
+    notes: resourceForm.value.notes.trim() || null
+  }
+  const planetId = Number(resourceForm.value.planet_id)
+  if (!planetId || !payload.resource_name) return
+  await axios.put(`${apiBase}/api/planets/${planetId}/resources`, payload)
+  resourceForm.value = {
+    system_id: '',
+    planet_id: '',
+    resource_name: '',
+    nms_item_id: '',
+    category: '',
+    icon_url: '',
+    quantity: '',
+    hotspot_type: '',
+    notes: ''
+  }
+  resourceMatches.value = []
+  lastMatchedName.value = ''
+}
+
+async function doSearch() {
+  const query = q.value.trim()
+  if (!query) {
+    results.value = { systems: [], planets: [], resources: [] }
+    return
+  }
+
+  loading.value = true
+  try {
+    const { data } = await axios.get(`${apiBase}/api/search`, { params: { q: query } })
+    results.value = data
+  } finally {
+    loading.value = false
+  }
+}
+
+let searchTimer = null
+watch(q, () => {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(doSearch, 200)
+})
+
+let resourceTimer = null
+watch(
+  () => resourceForm.value.resource_name,
+  () => {
+    clearTimeout(resourceTimer)
+    const needle = resourceForm.value.resource_name.trim()
+    if (!needle) {
+      resourceMatches.value = []
+      resourceForm.value.nms_item_id = ''
+      resourceForm.value.category = ''
+      resourceForm.value.icon_url = ''
+      lastMatchedName.value = ''
+      return
+    }
+    if (needle !== lastMatchedName.value) {
+      resourceForm.value.nms_item_id = ''
+      resourceForm.value.category = ''
+      resourceForm.value.icon_url = ''
+    }
+    resourceTimer = setTimeout(async () => {
+      resourceLoading.value = true
+      try {
+        const { data } = await axios.get(`${apiBase}/api/nms/items`, { params: { q: needle } })
+        resourceMatches.value = data
+      } finally {
+        resourceLoading.value = false
+      }
+    }, 200)
+  }
+)
+
+watch(
+  () => resourceForm.value.system_id,
+  () => {
+    resourceForm.value.planet_id = ''
+  }
+)
+
+function applyResourceMatch(match) {
+  resourceForm.value.resource_name = match.name
+  resourceForm.value.nms_item_id = match.id || ''
+  resourceForm.value.category = match.category || ''
+  resourceForm.value.icon_url = match.iconUrl || ''
+  resourceMatches.value = []
+  lastMatchedName.value = match.name
+}
+
+onMounted(async () => {
+  await loadSystems()
+  await loadPlanets()
+})
+</script>
+
+<template>
+  <main class="page">
+    <header class="hero">
+      <div>
+        <p class="kicker">No Man's Sky</p>
+        <h1>Starmap Resource Log</h1>
+        <p class="lede">Track systems, planets, and harvestable resources in one place.</p>
+      </div>
+      <div class="hero-chip">
+        <span>Live cache</span>
+        <strong>NMS item catalog</strong>
+      </div>
+    </header>
+
+    <section class="grid">
+      <article class="card">
+        <h2>Add System</h2>
+        <form class="form" @submit.prevent="submitSystem">
+          <div class="field">
+            <label>System name</label>
+            <input v-model="systemForm.name" placeholder="Ikarus Prime" />
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>Galaxy</label>
+              <input v-model="systemForm.galaxy" placeholder="Euclid" />
+            </div>
+            <div class="field">
+              <label>Region</label>
+              <input v-model="systemForm.region" placeholder="Kepis Conflux" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>Coordinates</label>
+              <input v-model="systemForm.coordinates" placeholder="0F23:0080:0D32:00A4" />
+            </div>
+            <div class="field">
+              <label>Notes</label>
+              <input v-model="systemForm.notes" placeholder="Trade economy, Gek." />
+            </div>
+          </div>
+          <button class="primary" type="submit">Save system</button>
+        </form>
+      </article>
+
+      <article class="card">
+        <h2>Add Planet</h2>
+        <form class="form" @submit.prevent="submitPlanet">
+          <div class="field">
+            <label>System</label>
+            <select v-model="planetForm.system_id">
+              <option value="">Select a system</option>
+              <option v-for="s in systems" :key="s.id" :value="s.id">{{ s.name }}</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Planet name</label>
+            <input v-model="planetForm.name" placeholder="Hysper VI" />
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>Planet type</label>
+              <input v-model="planetForm.planet_type" placeholder="Bountiful" />
+            </div>
+            <div class="field">
+              <label>Weather</label>
+              <input v-model="planetForm.weather" placeholder="Balmy" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>Sentinels</label>
+              <input v-model="planetForm.sentinels" placeholder="Sparse" />
+            </div>
+            <div class="field">
+              <label>Notes</label>
+              <input v-model="planetForm.notes" placeholder="Ancient bones" />
+            </div>
+          </div>
+          <button class="primary" type="submit">Save planet</button>
+        </form>
+      </article>
+
+      <article class="card">
+        <h2>Add Resource</h2>
+        <form class="form" @submit.prevent="submitResource">
+          <div class="row">
+            <div class="field">
+              <label>System (optional)</label>
+              <select v-model="resourceForm.system_id">
+                <option value="">All systems</option>
+                <option v-for="s in systems" :key="s.id" :value="s.id">{{ s.name }}</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Planet</label>
+              <select v-model="resourceForm.planet_id">
+                <option value="">Select a planet</option>
+                <option v-for="p in filteredPlanets" :key="p.id" :value="p.id">
+                  {{ p.system_name ? `${p.name} (${p.system_name})` : p.name }}
+                </option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label>Resource</label>
+            <input v-model="resourceForm.resource_name" placeholder="Activated Indium" />
+            <div v-if="resourceLoading" class="hint">Looking up catalog…</div>
+            <div v-if="resourceMatches.length" class="dropdown">
+              <button
+                v-for="match in resourceMatches"
+                :key="match.id || match.name"
+                class="dropdown-item"
+                type="button"
+                @click="applyResourceMatch(match)"
+              >
+                <span class="dropdown-main">
+                  <img v-if="match.iconUrl" :src="match.iconUrl" :alt="match.name" />
+                  <span>{{ match.name }}</span>
+                </span>
+                <span class="muted">{{ match.category || 'Unknown' }}</span>
+              </button>
+            </div>
+            <div v-if="resourceForm.icon_url" class="resource-preview">
+              <img :src="resourceForm.icon_url" :alt="resourceForm.resource_name" />
+              <span>Catalog icon</span>
+            </div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>Quantity</label>
+              <input v-model="resourceForm.quantity" placeholder="S-class, 40k/hr" />
+            </div>
+            <div class="field">
+              <label>Hotspot type</label>
+              <input v-model="resourceForm.hotspot_type" placeholder="Power / Mineral / Gas" />
+            </div>
+          </div>
+          <div class="field">
+            <label>Notes</label>
+            <input v-model="resourceForm.notes" placeholder="Portal glyphs nearby" />
+          </div>
+          <div class="row meta">
+            <div>
+              <span class="muted">Catalog ID</span>
+              <strong>{{ resourceForm.nms_item_id || '—' }}</strong>
+            </div>
+            <div>
+              <span class="muted">Category</span>
+              <strong>{{ resourceForm.category || '—' }}</strong>
+            </div>
+          </div>
+          <button class="primary" type="submit">Save resource</button>
+        </form>
+      </article>
+    </section>
+
+    <section class="search">
+      <h2>Search the log</h2>
+      <input
+        v-model="q"
+        class="search-input"
+        placeholder="Search systems, planets, resources…"
+      />
+      <p v-if="loading" class="hint">Searching…</p>
+
+      <div class="results">
+        <div class="result-card">
+          <h3>Systems</h3>
+          <div v-if="results.systems.length === 0" class="empty">No matches</div>
+          <ul v-else>
+            <li v-for="s in results.systems" :key="s.id">
+              <strong>{{ s.name }}</strong>
+              <span v-if="s.galaxy"> — {{ s.galaxy }}</span>
+              <span v-if="s.coordinates"> ({{ s.coordinates }})</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="result-card">
+          <h3>Planets</h3>
+          <div v-if="results.planets.length === 0" class="empty">No matches</div>
+          <ul v-else>
+            <li v-for="p in results.planets" :key="p.id">
+              <strong>{{ p.planet_name || p.name }}</strong>
+              <span> — {{ p.system_name }}</span>
+              <span v-if="p.planet_type"> · {{ p.planet_type }}</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="result-card">
+          <h3>Resources</h3>
+          <div v-if="results.resources.length === 0" class="empty">No matches</div>
+          <ul v-else>
+            <li v-for="(r, idx) in results.resources" :key="idx">
+              <strong>{{ r.resource_name }}</strong>
+              <span> — {{ r.system_name }} / {{ r.planet_name }}</span>
+              <span v-if="r.hotspot_type"> · {{ r.hotspot_type }}</span>
+              <span v-if="r.quantity"> · {{ r.quantity }}</span>
+              <div v-if="r.notes" class="note">{{ r.notes }}</div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+</template>
