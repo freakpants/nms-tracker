@@ -88,6 +88,7 @@ async function submitSystem() {
   await axios.post(`${apiBase}/api/systems`, payload)
   systemForm.value = { name: '', galaxy: '', region: '', coordinates: '', notes: '' }
   await loadSystems()
+  await doSearch()
 }
 
 async function submitPlanet() {
@@ -103,6 +104,7 @@ async function submitPlanet() {
   await axios.post(`${apiBase}/api/planets`, payload)
   planetForm.value = { system_id: '', name: '', planet_type: '', weather: '', sentinels: '', notes: '' }
   await loadPlanets()
+  await doSearch()
 }
 
 async function submitResource() {
@@ -130,6 +132,7 @@ async function submitResource() {
   }
   resourceMatches.value = []
   lastMatchedName.value = ''
+  await doSearch()
 }
 
 async function doSearch() {
