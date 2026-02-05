@@ -134,14 +134,10 @@ async function submitResource() {
 
 async function doSearch() {
   const query = q.value.trim()
-  if (!query) {
-    results.value = { systems: [], planets: [], resources: [] }
-    return
-  }
-
   loading.value = true
   try {
-    const { data } = await axios.get(`${apiBase}/api/search`, { params: { q: query } })
+    const params = query ? { q: query } : undefined
+    const { data } = await axios.get(`${apiBase}/api/search`, { params })
     results.value = data
   } finally {
     loading.value = false
@@ -204,6 +200,7 @@ function applyResourceMatch(match) {
 onMounted(async () => {
   await loadSystems()
   await loadPlanets()
+  await doSearch()
 })
 </script>
 

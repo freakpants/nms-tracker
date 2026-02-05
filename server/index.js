@@ -150,9 +150,7 @@ app.put('/api/planets/:planetId/resources', (req, res) => {
 // Search across everything
 app.get('/api/search', (req, res) => {
   const q = String(req.query.q || '').trim()
-  if (!q) return res.json({ systems: [], planets: [], resources: [] })
-
-  const like = `%${q}%`
+  const like = q ? `%${q}%` : '%'
 
   const systems = db.prepare(`
     SELECT * FROM systems
