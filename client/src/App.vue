@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import axios from 'axios'
+import ResourceRow from './components/ResourceRow.vue'
 
 const apiBase = 'http://localhost:3789'
 
@@ -277,11 +278,6 @@ function resolveIconUrl(url) {
   return `${apiBase}${url}`
 }
 
-function shouldScrollTitle(name) {
-  if (!name) return false
-  return name.length > 12
-}
-
 function getSystemResources(systemName) {
   return systemResourcesByName.value[systemName] || []
 }
@@ -479,35 +475,13 @@ onMounted(async () => {
                   <span v-if="s.coordinates"> ({{ s.coordinates }})</span>
                 </div>
                 <ul v-if="getSystemResources(s.name).length" class="resource-list system-resource-list">
-                  <li
+                  <ResourceRow
                     v-for="(r, idx) in getSystemResources(s.name)"
                     :key="`${s.id}-${r.resource_name}-${idx}`"
-                    class="resource-row"
-                  >
-                    <div class="resource-card">
-                      <span class="resource-card-title">{{ r.resource_name }}</span>
-                      <div class="resource-card-icon" :style="{ background: r.iconColor || '#111' }">
-                        <img v-if="r.iconUrl" :src="resolveIconUrl(r.iconUrl)" :alt="r.resource_name" @error="handleResourceIconError(r)" />
-                        <span v-else>{{ r.resource_name.slice(0, 2).toUpperCase() }}</span>
-                      </div>
-                    </div>
-                    <div class="resource-body">
-                      <div class="resource-title">
-                        <strong>{{ r.resource_name }}</strong>
-                        <span v-if="r.category" class="resource-tag">{{ r.category }}</span>
-                      </div>
-                      <div class="resource-meta">
-                        <span v-if="r.planet_name">{{ r.system_name }} / {{ r.planet_name }}</span>
-                        <span v-else>System: {{ r.system_name }}</span>
-                      </div>
-                      <div v-if="r.notes" class="note">{{ r.notes }}</div>
-                    </div>
-                    <div class="resource-badges">
-                      <span v-if="r.location_type === 'system'" class="resource-pill">System</span>
-                      <span v-if="r.hotspot_type" class="resource-pill">{{ r.hotspot_type }}</span>
-                      <span v-if="r.quantity" class="resource-pill">{{ r.quantity }}</span>
-                    </div>
-                  </li>
+                    :resource="r"
+                    :resolve-icon-url="resolveIconUrl"
+                    :on-icon-error="handleResourceIconError"
+                  />
                 </ul>
               </div>
               <button class="danger" type="button" @click="deleteSystem(s.id, s.name)">Delete</button>
@@ -533,18 +507,14 @@ onMounted(async () => {
         <div class="result-card">
           <h3>Resources</h3>
           <div v-if="nonSystemResources.length === 0" class="empty">No matches</div>
-          <ul v-else class="resource-card-list">
-            <li v-for="(r, idx) in nonSystemResources" :key="idx" class="resource-card-item">
-              <div class="resource-card">
-                <div class="resource-card-title" :class="{ scrolling: shouldScrollTitle(r.resource_name) }">
-                  <div class="resource-card-title-text">{{ r.resource_name }}</div>
-                </div>
-                <div class="resource-card-icon" :style="{ background: r.iconColor || '#111' }">
-                  <img v-if="r.iconUrl" :src="resolveIconUrl(r.iconUrl)" :alt="r.resource_name" @error="handleResourceIconError(r)" />
-                  <span v-else>{{ r.resource_name.slice(0, 2).toUpperCase() }}</span>
-                </div>
-              </div>
-            </li>
+          <ul v-else class="resource-list">
+            <ResourceRow
+              v-for="(r, idx) in nonSystemResources"
+              :key="idx"
+              :resource="r"
+              :resolve-icon-url="resolveIconUrl"
+              :on-icon-error="handleResourceIconError"
+            />
           </ul>
         </div>
       </div>

@@ -267,22 +267,6 @@ select:focus {
   scroll-snap-align: start;
 }
 
-.resource-card-list {
-  list-style: none;
-  padding-left: 0;
-  margin: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.resource-card-item {
-  scroll-snap-align: start;
-  flex: 0 0 auto;
-  width: 68px;
-  padding: 0;
-  margin: 0;
-}
 
 .resource-card {
   width: 68px;
