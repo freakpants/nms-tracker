@@ -34,8 +34,8 @@ const PlanetSchema = z.object({
 
 app.get('/api/health', (req, res) => res.json({ ok: true }))
 
-app.get('/api/icons/*', async (req, res) => {
-  const rawPath = req.params[0] || ''
+app.use('/api/icons', async (req, res) => {
+  const rawPath = req.path.replace(/^\/+/, '')
   const safePath = path.posix.normalize(rawPath).replace(/^\/+/, '')
   if (!safePath || safePath.includes('..')) {
     return res.status(400).json({ error: 'Invalid icon path' })
