@@ -408,13 +408,24 @@ onMounted(async () => {
         <div class="result-card">
           <h3>Resources</h3>
           <div v-if="results.resources.length === 0" class="empty">No matches</div>
-          <ul v-else>
-            <li v-for="(r, idx) in results.resources" :key="idx">
-              <strong>{{ r.resource_name }}</strong>
-              <span> — {{ r.system_name }} / {{ r.planet_name }}</span>
-              <span v-if="r.hotspot_type"> · {{ r.hotspot_type }}</span>
-              <span v-if="r.quantity"> · {{ r.quantity }}</span>
-              <div v-if="r.notes" class="note">{{ r.notes }}</div>
+          <ul v-else class="resource-list">
+            <li v-for="(r, idx) in results.resources" :key="idx" class="resource-row">
+              <div class="resource-icon">
+                <img v-if="r.iconUrl" :src="r.iconUrl" :alt="r.resource_name" />
+                <span v-else>{{ r.resource_name.slice(0, 2).toUpperCase() }}</span>
+              </div>
+              <div class="resource-body">
+                <div class="resource-title">
+                  <strong>{{ r.resource_name }}</strong>
+                  <span v-if="r.category" class="resource-tag">{{ r.category }}</span>
+                </div>
+                <div class="resource-meta">{{ r.system_name }} / {{ r.planet_name }}</div>
+                <div v-if="r.notes" class="note">{{ r.notes }}</div>
+              </div>
+              <div class="resource-badges">
+                <span v-if="r.hotspot_type" class="resource-pill">{{ r.hotspot_type }}</span>
+                <span v-if="r.quantity" class="resource-pill">{{ r.quantity }}</span>
+              </div>
             </li>
           </ul>
         </div>

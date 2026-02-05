@@ -2,7 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import { z } from 'zod'
 import { db } from './db.js'
-import { searchItems } from './nmsCache.js'
+import { getItemCache, searchItems } from './nmsCache.js'
 
 const app = express()
 app.use(cors())
@@ -148,7 +148,7 @@ app.put('/api/planets/:planetId/resources', (req, res) => {
 })
 
 // Search across everything
-app.get('/api/search', (req, res) => {
+app.get('/api/search', async (req, res) => {
   const q = String(req.query.q || '').trim()
   const like = q ? `%${q}%` : '%'
 
@@ -169,8 +169,9 @@ app.get('/api/search', (req, res) => {
     LIMIT 100
   `).all(like, like, like, like, like, like)
 
-  const resources = db.prepare(`
-    SELECT r.name AS resource_name, s.name AS system_name, p.name AS planet_name,
+  const rawResources = db.prepare(`
+    SELECT r.name AS resource_name, r.nms_item_id, r.category,
+           s.name AS system_name, p.name AS planet_name,
            pr.quantity, pr.hotspot_type, pr.notes
     FROM planet_resources pr
     JOIN resources r ON r.id = pr.resource_id
@@ -180,6 +181,27 @@ app.get('/api/search', (req, res) => {
     ORDER BY r.name
     LIMIT 200
   `).all(like, like, like, like)
+
+  let resources = rawResources
+  if (rawResources.length) {
+    const cache = await getItemCache()
+    const byId = new Map()
+    const byName = new Map()
+    for (const item of cache) {
+      if (item.id) byId.set(String(item.id), item)
+      if (item.name) byName.set(item.name.toLowerCase(), item)
+    }
+
+    resources = rawResources.map(row => {
+      const match = (row.nms_item_id && byId.get(String(row.nms_item_id)))
+        || byName.get(row.resource_name.toLowerCase())
+      return {
+        ...row,
+        category: row.category || match?.category || null,
+        iconUrl: match?.iconUrl || null
+      }
+    })
+  }
 
   res.json({ systems, planets, resources })
 })
