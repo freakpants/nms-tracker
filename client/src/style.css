@@ -4,6 +4,7 @@
   font-weight: 400;
   color: #e6edf0;
   background-color: #0b1215;
+  color-scheme: dark;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -131,6 +132,12 @@ select {
   background: #0c1419;
   color: #e6edf0;
   font-size: 14px;
+  color-scheme: dark;
+}
+
+select option {
+  background: #0c1419;
+  color: #e6edf0;
 }
 
 input:focus,
