@@ -75,6 +75,15 @@ app.post('/api/systems', (req, res) => {
   res.json({ id: info.lastInsertRowid })
 })
 
+// Delete system (cascades to planets/resources)
+app.delete('/api/systems/:systemId', (req, res) => {
+  const systemId = Number(req.params.systemId)
+  if (!Number.isInteger(systemId)) return res.status(400).json({ error: 'Invalid system id' })
+
+  db.prepare('DELETE FROM systems WHERE id = ?').run(systemId)
+  res.json({ ok: true })
+})
+
 // Create planet
 app.post('/api/planets', (req, res) => {
   const data = PlanetSchema.parse(req.body)
@@ -84,6 +93,15 @@ app.post('/api/planets', (req, res) => {
   `)
   const info = stmt.run(data)
   res.json({ id: info.lastInsertRowid })
+})
+
+// Delete planet
+app.delete('/api/planets/:planetId', (req, res) => {
+  const planetId = Number(req.params.planetId)
+  if (!Number.isInteger(planetId)) return res.status(400).json({ error: 'Invalid planet id' })
+
+  db.prepare('DELETE FROM planets WHERE id = ?').run(planetId)
+  res.json({ ok: true })
 })
 
 // Add/update a resource on a planet (resource auto-created if missing)

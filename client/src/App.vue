@@ -61,6 +61,21 @@ async function loadPlanets(systemId) {
   planets.value = data
 }
 
+async function deleteSystem(id, name) {
+  if (!window.confirm(`Delete system "${name}" and all its planets/resources?`)) return
+  await axios.delete(`${apiBase}/api/systems/${id}`)
+  await loadSystems()
+  await loadPlanets()
+  if (q.value.trim()) await doSearch()
+}
+
+async function deletePlanet(id, name) {
+  if (!window.confirm(`Delete planet "${name}" and its resources?`)) return
+  await axios.delete(`${apiBase}/api/planets/${id}`)
+  await loadPlanets()
+  if (q.value.trim()) await doSearch()
+}
+
 async function submitSystem() {
   const payload = {
     name: systemForm.value.name.trim(),
@@ -364,10 +379,13 @@ onMounted(async () => {
           <h3>Systems</h3>
           <div v-if="results.systems.length === 0" class="empty">No matches</div>
           <ul v-else>
-            <li v-for="s in results.systems" :key="s.id">
-              <strong>{{ s.name }}</strong>
-              <span v-if="s.galaxy"> — {{ s.galaxy }}</span>
-              <span v-if="s.coordinates"> ({{ s.coordinates }})</span>
+            <li v-for="s in results.systems" :key="s.id" class="list-row">
+              <div>
+                <strong>{{ s.name }}</strong>
+                <span v-if="s.galaxy"> — {{ s.galaxy }}</span>
+                <span v-if="s.coordinates"> ({{ s.coordinates }})</span>
+              </div>
+              <button class="danger" type="button" @click="deleteSystem(s.id, s.name)">Delete</button>
             </li>
           </ul>
         </div>
@@ -376,10 +394,13 @@ onMounted(async () => {
           <h3>Planets</h3>
           <div v-if="results.planets.length === 0" class="empty">No matches</div>
           <ul v-else>
-            <li v-for="p in results.planets" :key="p.id">
-              <strong>{{ p.planet_name || p.name }}</strong>
-              <span> — {{ p.system_name }}</span>
-              <span v-if="p.planet_type"> · {{ p.planet_type }}</span>
+            <li v-for="p in results.planets" :key="p.id" class="list-row">
+              <div>
+                <strong>{{ p.planet_name || p.name }}</strong>
+                <span> — {{ p.system_name }}</span>
+                <span v-if="p.planet_type"> · {{ p.planet_type }}</span>
+              </div>
+              <button class="danger" type="button" @click="deletePlanet(p.id, p.planet_name || p.name)">Delete</button>
             </li>
           </ul>
         </div>
