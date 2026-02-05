@@ -11,12 +11,27 @@ const props = defineProps({
   onIconError: {
     type: Function,
     required: true
+  },
+  onDelete: {
+    type: Function,
+    required: false
   }
 })
 
 function shouldScrollTitle(name) {
   if (!name) return false
   return name.length > 12
+}
+
+function handleDelete() {
+  if (props.onDelete) {
+    props.onDelete(
+      props.resource.planet_id,
+      props.resource.system_id,
+      props.resource.resource_id,
+      props.resource.resource_name
+    )
+  }
 }
 </script>
 
@@ -52,5 +67,14 @@ function shouldScrollTitle(name) {
       <span v-if="props.resource.hotspot_type" class="resource-pill">{{ props.resource.hotspot_type }}</span>
       <span v-if="props.resource.quantity" class="resource-pill">{{ props.resource.quantity }}</span>
     </div>
+    <button
+      v-if="props.onDelete"
+      class="danger"
+      type="button"
+      @click="handleDelete"
+      title="Delete this resource"
+    >
+      ✕
+    </button>
   </li>
 </template>

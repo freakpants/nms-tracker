@@ -114,6 +114,79 @@ app.delete('/api/planets/:planetId', (req, res) => {
   res.json({ ok: true })
 })
 
+// List settlements (optionally filtered by planet)
+app.get('/api/settlements', (req, res) => {
+  const planetId = req.query.planetId ? Number(req.query.planetId) : null
+  const rows = planetId
+    ? db.prepare(`
+        SELECT st.*, p.name AS planet_name, s.name AS system_name
+        FROM settlements st
+        JOIN planets p ON p.id = st.planet_id
+        JOIN systems s ON s.id = p.system_id
+        WHERE st.planet_id = ?
+        ORDER BY st.name
+      `).all(planetId)
+    : db.prepare(`
+        SELECT st.*, p.name AS planet_name, s.name AS system_name
+        FROM settlements st
+        JOIN planets p ON p.id = st.planet_id
+        JOIN systems s ON s.id = p.system_id
+        ORDER BY s.name, p.name, st.name
+      `).all()
+  res.json(rows)
+})
+
+// Create settlement
+app.post('/api/settlements', (req, res) => {
+  const SettlementSchema = z.object({
+    planet_id: z.number().int(),
+    name: z.string().min(1),
+    settlement_type: z.string().optional().nullable(),
+    coordinates: z.string().optional().nullable(),
+    notes: z.string().optional().nullable()
+  })
+  const data = SettlementSchema.parse(req.body)
+  const stmt = db.prepare(`
+    INSERT INTO settlements (planet_id, name, settlement_type, coordinates, notes)
+    VALUES (@planet_id, @name, @settlement_type, @coordinates, @notes)
+  `)
+  const info = stmt.run(data)
+  res.json({ id: info.lastInsertRowid })
+})
+
+// Delete settlement
+app.delete('/api/settlements/:settlementId', (req, res) => {
+  const settlementId = Number(req.params.settlementId)
+  if (!Number.isInteger(settlementId)) return res.status(400).json({ error: 'Invalid settlement id' })
+
+  db.prepare('DELETE FROM settlements WHERE id = ?').run(settlementId)
+  res.json({ ok: true })
+})
+
+// Delete a resource from a planet
+app.delete('/api/planets/:planetId/resources/:resourceId', (req, res) => {
+  const planetId = Number(req.params.planetId)
+  const resourceId = Number(req.params.resourceId)
+  if (!Number.isInteger(planetId) || !Number.isInteger(resourceId)) {
+    return res.status(400).json({ error: 'Invalid planet or resource id' })
+  }
+
+  db.prepare('DELETE FROM planet_resources WHERE planet_id = ? AND resource_id = ?').run(planetId, resourceId)
+  res.json({ ok: true })
+})
+
+// Delete a resource from a system
+app.delete('/api/systems/:systemId/resources/:resourceId', (req, res) => {
+  const systemId = Number(req.params.systemId)
+  const resourceId = Number(req.params.resourceId)
+  if (!Number.isInteger(systemId) || !Number.isInteger(resourceId)) {
+    return res.status(400).json({ error: 'Invalid system or resource id' })
+  }
+
+  db.prepare('DELETE FROM system_resources WHERE system_id = ? AND resource_id = ?').run(systemId, resourceId)
+  res.json({ ok: true })
+})
+
 // Add/update a resource on a planet (resource auto-created if missing)
 app.put('/api/planets/:planetId/resources', (req, res) => {
   const planetId = Number(req.params.planetId)
@@ -235,8 +308,8 @@ app.get('/api/search', async (req, res) => {
   `).all(like, like, like, like, like, like, like, like)
 
   const planetResources = db.prepare(`
-    SELECT r.name AS resource_name, r.nms_item_id, r.category,
-           s.name AS system_name, p.name AS planet_name,
+    SELECT r.id AS resource_id, r.name AS resource_name, r.nms_item_id, r.category,
+           s.id AS system_id, s.name AS system_name, p.id AS planet_id, p.name AS planet_name,
            pr.quantity, pr.hotspot_type, pr.notes,
            'planet' AS location_type
     FROM planet_resources pr
@@ -249,8 +322,8 @@ app.get('/api/search', async (req, res) => {
   `).all(like, like, like, like)
 
   const systemResources = db.prepare(`
-    SELECT r.name AS resource_name, r.nms_item_id, r.category,
-           s.name AS system_name, NULL AS planet_name,
+    SELECT r.id AS resource_id, r.name AS resource_name, r.nms_item_id, r.category,
+           s.id AS system_id, s.name AS system_name, NULL AS planet_id, NULL AS planet_name,
            sr.quantity, sr.hotspot_type, sr.notes,
            'system' AS location_type
     FROM system_resources sr
@@ -260,6 +333,17 @@ app.get('/api/search', async (req, res) => {
     ORDER BY r.name
     LIMIT 200
   `).all(like, like, like)
+
+  const settlements = db.prepare(`
+    SELECT st.*, p.name AS planet_name, s.name AS system_name
+    FROM settlements st
+    JOIN planets p ON p.id = st.planet_id
+    JOIN systems s ON s.id = p.system_id
+    WHERE st.name LIKE ? OR st.settlement_type LIKE ? OR st.coordinates LIKE ? OR st.notes LIKE ?
+       OR p.name LIKE ? OR s.name LIKE ?
+    ORDER BY s.name, p.name, st.name
+    LIMIT 100
+  `).all(like, like, like, like, like, like)
 
   const rawResources = [...planetResources, ...systemResources]
 
@@ -287,7 +371,7 @@ app.get('/api/search', async (req, res) => {
 
   resources.sort((a, b) => a.resource_name.localeCompare(b.resource_name))
 
-  res.json({ systems, planets, resources })
+  res.json({ systems, planets, settlements, resources })
 })
 
 const port = process.env.PORT || 3789

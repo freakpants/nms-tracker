@@ -55,7 +55,19 @@ db.exec(`
     FOREIGN KEY(resource_id) REFERENCES resources(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS settlements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    planet_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    settlement_type TEXT,
+    coordinates TEXT,
+    notes TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY(planet_id) REFERENCES planets(id) ON DELETE CASCADE
+  );
+
   CREATE INDEX IF NOT EXISTS idx_systems_name ON systems(name);
   CREATE INDEX IF NOT EXISTS idx_planets_name ON planets(name);
   CREATE INDEX IF NOT EXISTS idx_resources_name ON resources(name);
+  CREATE INDEX IF NOT EXISTS idx_settlements_planet ON settlements(planet_id);
 `)

@@ -6,11 +6,12 @@ import ResourceRow from './components/ResourceRow.vue'
 const apiBase = 'http://localhost:3789'
 
 const q = ref('')
-const results = ref({ systems: [], planets: [], resources: [] })
+const results = ref({ systems: [], planets: [], settlements: [], resources: [] })
 const loading = ref(false)
 
 const systems = ref([])
 const planets = ref([])
+const settlements = ref([])
 
 const systemForm = ref({
   name: '',
@@ -26,6 +27,14 @@ const planetForm = ref({
   planet_type: '',
   weather: '',
   sentinels: '',
+  notes: ''
+})
+
+const settlementForm = ref({
+  planet_id: '',
+  name: '',
+  settlement_type: '',
+  coordinates: '',
   notes: ''
 })
 
@@ -48,6 +57,7 @@ const lastMatchedName = ref('')
 
 const systemError = ref('')
 const planetError = ref('')
+const settlementError = ref('')
 const resourceError = ref('')
 
 const systemNames = computed(() => {
@@ -93,6 +103,12 @@ async function loadPlanets(systemId) {
   planets.value = data
 }
 
+async function loadSettlements(planetId) {
+  const params = planetId ? { planetId } : undefined
+  const { data } = await axios.get(`${apiBase}/api/settlements`, { params })
+  settlements.value = data
+}
+
 async function deleteSystem(id, name) {
   if (!window.confirm(`Delete system "${name}" and all its planets/resources?`)) return
   await axios.delete(`${apiBase}/api/systems/${id}`)
@@ -106,6 +122,30 @@ async function deletePlanet(id, name) {
   await axios.delete(`${apiBase}/api/planets/${id}`)
   await loadPlanets()
   if (q.value.trim()) await doSearch()
+}
+
+async function deleteResource(planetId, systemId, resourceId, resourceName) {
+  if (!window.confirm(`Delete "${resourceName}"?`)) return
+  try {
+    if (planetId) {
+      await axios.delete(`${apiBase}/api/planets/${planetId}/resources/${resourceId}`)
+    } else if (systemId) {
+      await axios.delete(`${apiBase}/api/systems/${systemId}/resources/${resourceId}`)
+    }
+    if (q.value.trim()) await doSearch()
+  } catch (err) {
+    console.error('Failed to delete resource', err)
+  }
+}
+
+async function deleteSettlement(id, name) {
+  if (!window.confirm(`Delete settlement "${name}"?`)) return
+  try {
+    await axios.delete(`${apiBase}/api/settlements/${id}`)
+    await doSearch()
+  } catch (err) {
+    console.error('Failed to delete settlement', err)
+  }
 }
 
 async function submitSystem() {
@@ -152,6 +192,29 @@ async function submitPlanet() {
     await doSearch()
   } catch (err) {
     planetError.value = 'Could not save planet. Check required fields and try again.'
+  }
+}
+
+async function submitSettlement() {
+  settlementError.value = ''
+  const payload = {
+    planet_id: Number(settlementForm.value.planet_id),
+    name: settlementForm.value.name.trim(),
+    settlement_type: settlementForm.value.settlement_type.trim() || null,
+    coordinates: settlementForm.value.coordinates.trim() || null,
+    notes: settlementForm.value.notes.trim() || null
+  }
+  if (!payload.planet_id || !payload.name) {
+    settlementError.value = 'Planet and settlement name are required.'
+    return
+  }
+  try {
+    await axios.post(`${apiBase}/api/settlements`, payload)
+    settlementForm.value = { planet_id: '', name: '', settlement_type: '', coordinates: '', notes: '' }
+    await loadSettlements()
+    await doSearch()
+  } catch (err) {
+    settlementError.value = 'Could not save settlement. Check required fields and try again.'
   }
 }
 
@@ -293,6 +356,7 @@ function getSystemResources(systemName) {
 onMounted(async () => {
   await loadSystems()
   await loadPlanets()
+  await loadSettlements()
   await doSearch()
 })
 </script>
@@ -380,6 +444,41 @@ onMounted(async () => {
           </div>
           <button class="primary" type="submit">Save planet</button>
           <p v-if="planetError" class="form-error">{{ planetError }}</p>
+        </form>
+      </article>
+
+      <article class="card">
+        <h2>Add Settlement</h2>
+        <form class="form" @submit.prevent="submitSettlement">
+          <div class="field">
+            <label>Planet</label>
+            <select v-model="settlementForm.planet_id">
+              <option value="">Select a planet</option>
+              <option v-for="p in planets" :key="p.id" :value="p.id">
+                {{ p.name }} ({{ p.system_name }})
+              </option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Settlement name</label>
+            <input v-model="settlementForm.name" placeholder="Freighter Landing" />
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>Settlement type</label>
+              <input v-model="settlementForm.settlement_type" placeholder="Trading Post / Base / Outpost" />
+            </div>
+            <div class="field">
+              <label>Coordinates</label>
+              <input v-model="settlementForm.coordinates" placeholder="Portal glyphs" />
+            </div>
+          </div>
+          <div class="field">
+            <label>Notes</label>
+            <input v-model="settlementForm.notes" placeholder="Trading items, missions" />
+          </div>
+          <button class="primary" type="submit">Save settlement</button>
+          <p v-if="settlementError" class="form-error">{{ settlementError }}</p>
         </form>
       </article>
 
@@ -489,6 +588,7 @@ onMounted(async () => {
                     :resource="r"
                     :resolve-icon-url="resolveIconUrl"
                     :on-icon-error="handleResourceIconError"
+                    :on-delete="deleteResource"
                   />
                 </ul>
               </div>
@@ -513,6 +613,21 @@ onMounted(async () => {
         </div>
 
         <div class="result-card">
+          <h3>Settlements</h3>
+          <div v-if="results.settlements.length === 0" class="empty">No matches</div>
+          <ul v-else>
+            <li v-for="st in results.settlements" :key="st.id" class="list-row">
+              <div>
+                <strong>{{ st.name }}</strong>
+                <span> — {{ st.system_name }} / {{ st.planet_name }}</span>
+                <span v-if="st.settlement_type"> · {{ st.settlement_type }}</span>
+              </div>
+              <button class="danger" type="button" @click="deleteSettlement(st.id, st.name)">Delete</button>
+            </li>
+          </ul>
+        </div>
+
+        <div class="result-card">
           <h3>Resources</h3>
           <div v-if="nonSystemResources.length === 0" class="empty">No matches</div>
           <ul v-else class="resource-list">
@@ -522,6 +637,7 @@ onMounted(async () => {
               :resource="r"
               :resolve-icon-url="resolveIconUrl"
               :on-icon-error="handleResourceIconError"
+              :on-delete="deleteResource"
             />
           </ul>
         </div>
