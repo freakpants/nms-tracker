@@ -390,15 +390,23 @@ app.get('/api/search', async (req, res) => {
   `).all(like, like, like)
 
   const settlements = db.prepare(`
-    SELECT st.*, p.name AS planet_name, s.name AS system_name
+    SELECT DISTINCT st.*, p.name AS planet_name, s.name AS system_name
     FROM settlements st
     JOIN planets p ON p.id = st.planet_id
     JOIN systems s ON s.id = p.system_id
     WHERE st.name LIKE ? OR st.settlement_type LIKE ? OR st.coordinates LIKE ? OR st.notes LIKE ?
        OR p.name LIKE ? OR s.name LIKE ?
-    ORDER BY s.name, p.name, st.name
+    UNION
+    SELECT DISTINCT st.*, p.name AS planet_name, s.name AS system_name
+    FROM settlements st
+    JOIN planets p ON p.id = st.planet_id
+    JOIN systems s ON s.id = p.system_id
+    JOIN settlement_resources sr ON sr.settlement_id = st.id
+    JOIN resources r ON r.id = sr.resource_id
+    WHERE r.name LIKE ? OR COALESCE(sr.notes, '') LIKE ?
+    ORDER BY system_name, planet_name, name
     LIMIT 100
-  `).all(like, like, like, like, like, like)
+  `).all(like, like, like, like, like, like, like, like)
 
   const settlementResources = db.prepare(`
     SELECT r.id AS resource_id, r.name AS resource_name, r.nms_item_id, r.category,
