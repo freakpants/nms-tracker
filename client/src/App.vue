@@ -41,6 +41,7 @@ const settlementForm = ref({
 const resourceForm = ref({
   system_id: '',
   planet_id: '',
+  settlement_id: '',
   resource_name: '',
   nms_item_id: '',
   category: '',
@@ -78,18 +79,39 @@ const systemResourcesByName = computed(() => {
   return byName
 })
 
+const settlementResourcesByName = computed(() => {
+  const byName = {}
+  for (const resource of results.value.resources || []) {
+    if (resource.location_type !== 'settlement') continue
+    const key = resource.settlement_name || ''
+    if (!byName[key]) byName[key] = []
+    byName[key].push(resource)
+  }
+  for (const key of Object.keys(byName)) {
+    byName[key].sort((a, b) => a.resource_name.localeCompare(b.resource_name))
+  }
+  return byName
+})
+
 const nonSystemResources = computed(() => {
   const planetResources = (results.value.resources || []).filter(resource => resource.location_type === 'planet')
+  const settlementResources = (results.value.resources || []).filter(resource => resource.location_type === 'settlement')
   const unlistedSystemResources = (results.value.resources || []).filter(resource => 
     resource.location_type === 'system' && !systemNames.value.has(resource.system_name)
   )
-  return [...planetResources, ...unlistedSystemResources]
+  return [...planetResources, ...settlementResources, ...unlistedSystemResources]
 })
 
 const filteredPlanets = computed(() => {
   const systemId = Number(resourceForm.value.system_id || 0)
   if (!systemId) return planets.value
   return planets.value.filter(p => p.system_id === systemId)
+})
+
+const filteredSettlements = computed(() => {
+  const planetId = Number(resourceForm.value.planet_id || 0)
+  if (!planetId) return settlements.value
+  return settlements.value.filter(st => st.planet_id === planetId)
 })
 
 async function loadSystems() {
@@ -124,10 +146,12 @@ async function deletePlanet(id, name) {
   if (q.value.trim()) await doSearch()
 }
 
-async function deleteResource(planetId, systemId, resourceId, resourceName) {
+async function deleteResource(planetId, systemId, settlementId, resourceId, resourceName) {
   if (!window.confirm(`Delete "${resourceName}"?`)) return
   try {
-    if (planetId) {
+    if (settlementId) {
+      await axios.delete(`${apiBase}/api/settlements/${settlementId}/resources/${resourceId}`)
+    } else if (planetId) {
       await axios.delete(`${apiBase}/api/planets/${planetId}/resources/${resourceId}`)
     } else if (systemId) {
       await axios.delete(`${apiBase}/api/systems/${systemId}/resources/${resourceId}`)
@@ -230,12 +254,15 @@ async function submitResource() {
   }
   const planetId = Number(resourceForm.value.planet_id)
   const systemId = Number(resourceForm.value.system_id)
-  if (!payload.resource_name || (!planetId && !systemId)) {
-    resourceError.value = 'Select a system or planet and enter a resource name.'
+  const settlementId = Number(resourceForm.value.settlement_id)
+  if (!payload.resource_name || (!planetId && !systemId && !settlementId)) {
+    resourceError.value = 'Select a system, planet, or settlement and enter a resource name.'
     return
   }
   try {
-    if (planetId) {
+    if (settlementId) {
+      await axios.put(`${apiBase}/api/settlements/${settlementId}/resources`, payload)
+    } else if (planetId) {
       await axios.put(`${apiBase}/api/planets/${planetId}/resources`, payload)
     } else {
       await axios.put(`${apiBase}/api/systems/${systemId}/resources`, payload)
@@ -243,6 +270,7 @@ async function submitResource() {
     resourceForm.value = {
       system_id: resourceForm.value.system_id,
       planet_id: resourceForm.value.planet_id,
+      settlement_id: resourceForm.value.settlement_id,
       resource_name: '',
       nms_item_id: '',
       category: '',
@@ -264,8 +292,10 @@ async function doSearch() {
   const query = q.value.trim()
   loading.value = true
   try {
-    const params = query ? { q: query } : undefined
-    const { data } = await axios.get(`${apiBase}/api/search`, { params })
+    // Always include empty q parameter so API processes it
+    const { data } = await axios.get(`${apiBase}/api/search`, { 
+      params: query ? { q: query } : {} 
+    })
     results.value = data
   } finally {
     loading.value = false
@@ -313,6 +343,14 @@ watch(
   () => resourceForm.value.system_id,
   () => {
     resourceForm.value.planet_id = ''
+    resourceForm.value.settlement_id = ''
+  }
+)
+
+watch(
+  () => resourceForm.value.planet_id,
+  () => {
+    resourceForm.value.settlement_id = ''
   }
 )
 
@@ -351,6 +389,10 @@ function resolveIconUrl(url) {
 
 function getSystemResources(systemName) {
   return systemResourcesByName.value[systemName] || []
+}
+
+function getSettlementResources(settlementName) {
+  return settlementResourcesByName.value[settlementName] || []
 }
 
 onMounted(async () => {
@@ -502,6 +544,15 @@ onMounted(async () => {
                 </option>
               </select>
             </div>
+            <div class="field">
+              <label>Settlement</label>
+              <select v-model="resourceForm.settlement_id">
+                <option value="">Select a settlement</option>
+                <option v-for="st in filteredSettlements" :key="st.id" :value="st.id">
+                  {{ st.name }} ({{ st.planet_name }})
+                </option>
+              </select>
+            </div>
           </div>
           <div class="field">
             <label>Resource</label>
@@ -616,11 +667,23 @@ onMounted(async () => {
           <h3>Settlements</h3>
           <div v-if="results.settlements.length === 0" class="empty">No matches</div>
           <ul v-else>
-            <li v-for="st in results.settlements" :key="st.id" class="list-row">
-              <div>
-                <strong>{{ st.name }}</strong>
-                <span> — {{ st.system_name }} / {{ st.planet_name }}</span>
-                <span v-if="st.settlement_type"> · {{ st.settlement_type }}</span>
+            <li v-for="st in results.settlements" :key="st.id" class="list-row settlement-row">
+              <div class="settlement-main">
+                <div>
+                  <strong>{{ st.name }}</strong>
+                  <span> — {{ st.system_name }} / {{ st.planet_name }}</span>
+                  <span v-if="st.settlement_type"> · {{ st.settlement_type }}</span>
+                </div>
+                <ul v-if="getSettlementResources(st.name).length" class="resource-list settlement-resource-list">
+                  <ResourceRow
+                    v-for="(r, idx) in getSettlementResources(st.name)"
+                    :key="`${st.id}-${r.resource_name}-${idx}`"
+                    :resource="r"
+                    :resolve-icon-url="resolveIconUrl"
+                    :on-icon-error="handleResourceIconError"
+                    :on-delete="deleteResource"
+                  />
+                </ul>
               </div>
               <button class="danger" type="button" @click="deleteSettlement(st.id, st.name)">Delete</button>
             </li>
@@ -632,8 +695,8 @@ onMounted(async () => {
           <div v-if="nonSystemResources.length === 0" class="empty">No matches</div>
           <ul v-else class="resource-list">
             <ResourceRow
-              v-for="(r, idx) in nonSystemResources"
-              :key="idx"
+              v-for="r in nonSystemResources"
+              :key="`${r.location_type}-${r.resource_id}-${r.settlement_id || r.planet_id || r.system_id}`"
               :resource="r"
               :resolve-icon-url="resolveIconUrl"
               :on-icon-error="handleResourceIconError"

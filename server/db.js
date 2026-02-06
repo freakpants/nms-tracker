@@ -66,8 +66,20 @@ db.exec(`
     FOREIGN KEY(planet_id) REFERENCES planets(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS settlement_resources (
+    settlement_id INTEGER NOT NULL,
+    resource_id INTEGER NOT NULL,
+    quantity TEXT,
+    hotspot_type TEXT,
+    notes TEXT,
+    PRIMARY KEY (settlement_id, resource_id),
+    FOREIGN KEY(settlement_id) REFERENCES settlements(id) ON DELETE CASCADE,
+    FOREIGN KEY(resource_id) REFERENCES resources(id) ON DELETE CASCADE
+  );
+
   CREATE INDEX IF NOT EXISTS idx_systems_name ON systems(name);
   CREATE INDEX IF NOT EXISTS idx_planets_name ON planets(name);
   CREATE INDEX IF NOT EXISTS idx_resources_name ON resources(name);
   CREATE INDEX IF NOT EXISTS idx_settlements_planet ON settlements(planet_id);
+  CREATE INDEX IF NOT EXISTS idx_settlement_resources ON settlement_resources(settlement_id);
 `)

@@ -28,6 +28,7 @@ function handleDelete() {
     props.onDelete(
       props.resource.planet_id,
       props.resource.system_id,
+      props.resource.settlement_id,
       props.resource.resource_id,
       props.resource.resource_name
     )
@@ -57,13 +58,15 @@ function handleDelete() {
         <span v-if="props.resource.category" class="resource-tag">{{ props.resource.category }}</span>
       </div>
       <div class="resource-meta">
-        <span v-if="props.resource.planet_name">{{ props.resource.system_name }} / {{ props.resource.planet_name }}</span>
+        <span v-if="props.resource.settlement_name">{{ props.resource.system_name }} / {{ props.resource.planet_name }} / {{ props.resource.settlement_name }}</span>
+        <span v-else-if="props.resource.planet_name">{{ props.resource.system_name }} / {{ props.resource.planet_name }}</span>
         <span v-else>System: {{ props.resource.system_name }}</span>
       </div>
       <div v-if="props.resource.notes" class="note">{{ props.resource.notes }}</div>
     </div>
     <div class="resource-badges">
       <span v-if="props.resource.location_type === 'system'" class="resource-pill">System</span>
+      <span v-if="props.resource.location_type === 'settlement'" class="resource-pill">Settlement</span>
       <span v-if="props.resource.hotspot_type" class="resource-pill">{{ props.resource.hotspot_type }}</span>
       <span v-if="props.resource.quantity" class="resource-pill">{{ props.resource.quantity }}</span>
     </div>

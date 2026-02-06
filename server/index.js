@@ -163,6 +163,61 @@ app.delete('/api/settlements/:settlementId', (req, res) => {
   res.json({ ok: true })
 })
 
+// Add/update a resource on a settlement (resource auto-created if missing)
+app.put('/api/settlements/:settlementId/resources', (req, res) => {
+  const settlementId = Number(req.params.settlementId)
+
+  const Body = z.object({
+    resource_name: z.string().min(1),
+    nms_item_id: z.string().optional().nullable(),
+    category: z.string().optional().nullable(),
+    quantity: z.string().optional().nullable(),
+    hotspot_type: z.string().optional().nullable(),
+    notes: z.string().optional().nullable()
+  })
+
+  const data = Body.parse(req.body)
+
+  const upsertResource = db.prepare(`
+    INSERT INTO resources (name, nms_item_id, category)
+    VALUES (?, ?, ?)
+    ON CONFLICT(name) DO UPDATE SET
+      nms_item_id = COALESCE(excluded.nms_item_id, resources.nms_item_id),
+      category = COALESCE(excluded.category, resources.category)
+  `)
+
+  const getResId = db.prepare(`SELECT id FROM resources WHERE name = ?`)
+  const upsertLink = db.prepare(`
+    INSERT INTO settlement_resources (settlement_id, resource_id, quantity, hotspot_type, notes)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(settlement_id, resource_id) DO UPDATE SET
+      quantity = excluded.quantity,
+      hotspot_type = excluded.hotspot_type,
+      notes = excluded.notes
+  `)
+
+  const tx = db.transaction(() => {
+    upsertResource.run(data.resource_name, data.nms_item_id ?? null, data.category ?? null)
+    const row = getResId.get(data.resource_name)
+    upsertLink.run(settlementId, row.id, data.quantity ?? null, data.hotspot_type ?? null, data.notes ?? null)
+  })
+
+  tx()
+  res.json({ ok: true })
+})
+
+// Delete a resource from a settlement
+app.delete('/api/settlements/:settlementId/resources/:resourceId', (req, res) => {
+  const settlementId = Number(req.params.settlementId)
+  const resourceId = Number(req.params.resourceId)
+  if (!Number.isInteger(settlementId) || !Number.isInteger(resourceId)) {
+    return res.status(400).json({ error: 'Invalid settlement or resource id' })
+  }
+
+  db.prepare('DELETE FROM settlement_resources WHERE settlement_id = ? AND resource_id = ?').run(settlementId, resourceId)
+  res.json({ ok: true })
+})
+
 // Delete a resource from a planet
 app.delete('/api/planets/:planetId/resources/:resourceId', (req, res) => {
   const planetId = Number(req.params.planetId)
@@ -316,7 +371,7 @@ app.get('/api/search', async (req, res) => {
     JOIN resources r ON r.id = pr.resource_id
     JOIN planets p ON p.id = pr.planet_id
     JOIN systems s ON s.id = p.system_id
-    WHERE r.name LIKE ? OR pr.notes LIKE ? OR p.name LIKE ? OR s.name LIKE ?
+    WHERE r.name LIKE ? OR COALESCE(pr.notes, '') LIKE ? OR p.name LIKE ? OR s.name LIKE ?
     ORDER BY r.name
     LIMIT 200
   `).all(like, like, like, like)
@@ -329,7 +384,7 @@ app.get('/api/search', async (req, res) => {
     FROM system_resources sr
     JOIN resources r ON r.id = sr.resource_id
     JOIN systems s ON s.id = sr.system_id
-    WHERE r.name LIKE ? OR sr.notes LIKE ? OR s.name LIKE ?
+    WHERE r.name LIKE ? OR COALESCE(sr.notes, '') LIKE ? OR s.name LIKE ?
     ORDER BY r.name
     LIMIT 200
   `).all(like, like, like)
@@ -345,7 +400,23 @@ app.get('/api/search', async (req, res) => {
     LIMIT 100
   `).all(like, like, like, like, like, like)
 
-  const rawResources = [...planetResources, ...systemResources]
+  const settlementResources = db.prepare(`
+    SELECT r.id AS resource_id, r.name AS resource_name, r.nms_item_id, r.category,
+           s.id AS system_id, s.name AS system_name, p.id AS planet_id, p.name AS planet_name,
+           st.id AS settlement_id, st.name AS settlement_name,
+           sr.quantity, sr.hotspot_type, sr.notes,
+           'settlement' AS location_type
+    FROM settlement_resources sr
+    JOIN resources r ON r.id = sr.resource_id
+    JOIN settlements st ON st.id = sr.settlement_id
+    JOIN planets p ON p.id = st.planet_id
+    JOIN systems s ON s.id = p.system_id
+    WHERE r.name LIKE ? OR COALESCE(sr.notes, '') LIKE ? OR st.name LIKE ? OR p.name LIKE ? OR s.name LIKE ?
+    ORDER BY r.name
+    LIMIT 200
+  `).all(like, like, like, like, like)
+
+  const rawResources = [...planetResources, ...systemResources, ...settlementResources]
 
   let resources = rawResources
   if (rawResources.length) {

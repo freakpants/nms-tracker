@@ -34,8 +34,7 @@ p {
 }
 
 #app {
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
 }
 
 .page {
@@ -86,7 +85,7 @@ p {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
   gap: 18px;
   margin-top: 22px;
 }
@@ -98,6 +97,7 @@ p {
   box-shadow: 0 16px 35px rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(6px);
   border: 1px solid rgba(140, 170, 188, 0.18);
+  max-width: 500px;
 }
 
 .form {
@@ -394,6 +394,20 @@ select:focus {
 }
 
 .system-resource-list {
+  margin: 8px 0 0;
+  padding-left: 0;
+}
+
+.settlement-row {
+  align-items: flex-start;
+}
+
+.settlement-main {
+  display: grid;
+  gap: 6px;
+}
+
+.settlement-resource-list {
   margin: 8px 0 0;
   padding-left: 0;
 }
